@@ -9,18 +9,28 @@ namespace Penguin.Robinhood.Extensions
     {
         public static DirectoryInfo DataPointDirectory(this IHasId id)
         {
-            string path = Path.Combine(RobinhoodClient.AppData, "DataPoints", $"{id.Id}");
-
-            if (!Directory.Exists(path))
+            if (id is null)
             {
-                Directory.CreateDirectory(path);
+                throw new ArgumentNullException(nameof(id));
             }
+
+            string path = Path.Combine(RobinhoodClient.AppData, "DataPoints", $"{id.Id}");
 
             return new DirectoryInfo(path);
         }
 
         public static FileInfo DataPointFile(this IHasId id, DataPoint dp)
         {
+            if (id is null)
+            {
+                throw new ArgumentNullException(nameof(id));
+            }
+
+            if (dp is null)
+            {
+                throw new ArgumentNullException(nameof(dp));
+            }
+
             return id.DataPointFile(dp.BeginsAt.Value, dp.Interval);
         }
 

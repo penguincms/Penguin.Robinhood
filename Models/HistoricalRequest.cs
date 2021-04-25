@@ -14,7 +14,8 @@ namespace Penguin.Robinhood.Models
         _Week = 604800,
         _Hour = 3600,
         _5Minute = 300,
-        _15Second = 15
+        _15Second = 15,
+        _1Second = 1
     }
 
     public enum HistoricalSpan
@@ -30,16 +31,16 @@ namespace Penguin.Robinhood.Models
 
     public class HistoricalRequest : HttpQuery
     {
-        [HttpQueryPropertyIgnore]
+        [IgnoreQueryProperty]
         public string Id { get; set; }
 
-        [HttpQueryPropertyIgnore]
+        [IgnoreQueryProperty]
         public HistoricalBounds Bounds { get; set; } = HistoricalBounds._24_7;
 
-        [HttpQueryPropertyIgnore]
+        [IgnoreQueryProperty]
         public HistoricalInterval Interval { get; set; }
 
-        [HttpQueryPropertyIgnore]
+        [IgnoreQueryProperty]
         public HistoricalSpan Span { get; set; }
 
         [HttpQueryProperty("bounds")]

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Penguin.Robinhood</name>
+    </assembly>
+    <members>
+        <member name="M:Penguin.Robinhood.RobinhoodClient.Buy(Penguin.Robinhood.Models.Account,Penguin.Robinhood.Interfaces.IHasId,System.Decimal,System.Nullable{System.Decimal})">
+            <summary>
+            Buys the specified coin with the specified account
+            </summary>
+            <param name="account"></param>
+            <param name="toPurchase"></param>
+            <param name="usdAmount">Quantity to purchase. If max value, then uses all available funds</param>
+            <param name="price">if null, uses market. Otherwise, limit</param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

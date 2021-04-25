@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31025.218
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Penguin.Robinhood", "Penguin.Robinhood.csproj", "{1D7070DE-AA41-41B7-B1C5-0D35C8D8BB1C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1D7070DE-AA41-41B7-B1C5-0D35C8D8BB1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D7070DE-AA41-41B7-B1C5-0D35C8D8BB1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D7070DE-AA41-41B7-B1C5-0D35C8D8BB1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D7070DE-AA41-41B7-B1C5-0D35C8D8BB1C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {91F1D7FA-8633-4A68-8CCB-4DF7EF6A22D7}
+	EndGlobalSection
+EndGlobal

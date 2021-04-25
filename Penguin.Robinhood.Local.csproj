@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <PackageProjectUrl>https://github.com/penguincms/Penguin.Robinhood</PackageProjectUrl>
+    <DocumentationFile>Penguin.Robinhood.xml</DocumentationFile>
+    <Version>5.0.5</Version>
+    <AssemblyName>Penguin.Robinhood</AssemblyName>
+    <RootNamespace>Penguin.Robinhood</RootNamespace>
+    <Description>Not Available</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Penguin.Collections\Penguin.Collections.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Debugging\Penguin.Debugging.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Extensions.Exceptions\Penguin.Extensions.Exceptions.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Extensions.String\Penguin.Extensions.String.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Json\Penguin.Json.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Json.Abstractions\Penguin.Json.Abstractions.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Reflection\Penguin.Reflection.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Reflection.Abstractions\Penguin.Reflection.Abstractions.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Reflection.Extensions\Penguin.Reflection.Extensions.Local.csproj" />
+    <ProjectReference Include="..\Penguin.SystemExtensions.Abstractions\Penguin.SystemExtensions.Abstractions.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Web.Http\Penguin.Web.Http.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Web.JsonClient\Penguin.Web.JsonClient.Local.csproj" />
+    <ProjectReference Include="..\Penguin.Web.WebClientEx\Penguin.Web.WebClientEx.Local.csproj" />
+  </ItemGroup>
+  <Import Project="Penguin.Projects.Shared\Penguin.Projects.Shared.csproj" />
+</Project>

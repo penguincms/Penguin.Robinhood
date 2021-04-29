@@ -204,7 +204,7 @@ namespace Penguin.Robinhood
         {
             DirectoryInfo cacheDir = id.DataPointDirectory();
 
-            string DataPointFile = $"{cacheDir.FullName}.dat";
+            string DataPointFile = $"{cacheDir.FullName}.json";
 
             foreach(string line in File.ReadAllLines(DataPointFile))
             {

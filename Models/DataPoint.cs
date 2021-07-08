@@ -6,48 +6,42 @@ namespace Penguin.Robinhood.Models
 {
     public class DataPoint : LoggedObject, IPricePoint
     {
-        public Quote Quote { get; set; }
+        [JsonProperty("begins_at")]
+        public DateTime? BeginsAt { get; set; }
 
         [JsonIgnore]
         public long BeginsTicks => this.BeginsAt?.Ticks ?? 0;
 
-        [JsonIgnore]
-        public long EndsTicks => this.EndsAt?.Ticks ?? 0;
-
-        [JsonProperty("begins_at")]
-        public DateTime? BeginsAt { get; set; }
-
-        [JsonProperty("open_price")]
-        public virtual decimal? OpenPrice { get; set; }
-
         [JsonProperty("close_price")]
         public decimal? ClosePrice { get; set; }
+
+        public DateTime? EndsAt => this.BeginsAt?.AddMinutes((int)this.Interval);
+
+        [JsonIgnore]
+        public long EndsTicks => this.EndsAt?.Ticks ?? 0;
 
         [JsonProperty("high_price")]
         public decimal? HighPrice { get; set; }
 
+        [JsonProperty("interpolated")]
+        public bool Interpolated { get; set; }
+
+        public HistoricalInterval Interval { get; set; }
+
         [JsonProperty("low_price")]
         public decimal? LowPrice { get; set; }
 
-        [JsonProperty("volume")]
-        public int Volume { get; set; }
+        [JsonProperty("open_price")]
+        public virtual decimal? OpenPrice { get; set; }
+
+        decimal IPricePoint.Price => this.OpenPrice.Value;
+        public Quote Quote { get; set; }
 
         [JsonProperty("session")]
         public string Session { get; set; }
 
-        [JsonProperty("interpolated")]
-        public bool Interpolated { get; set; }
-
-        public DateTime? EndsAt => this.BeginsAt?.AddMinutes((int)this.Interval);
-
-        public HistoricalInterval Interval { get; set; }
-
-        decimal IPricePoint.Price => this.OpenPrice.Value;
-
-        public override string ToString()
-        {
-            return $"{BeginsAt?.Ticks}\t{(int)Interval}\t{OpenPrice}\t{ClosePrice}\t{HighPrice}\t{LowPrice}\t{Volume}\t{Session}\t{(Interpolated ? 0 : 1)}\t{Quote?.AskPrice}\t{Quote?.BidPrice}\t{Quote?.MarkPrice}\t{Quote?.HighPrice}\t{Quote?.LowPrice}\t{Quote?.OpenPrice}\t{Quote?.Symbol}\t{Quote?.Id}\t{Quote?.Volume}";
-        }
+        [JsonProperty("volume")]
+        public int Volume { get; set; }
 
         public static DataPoint FromString(string line)
         {
@@ -72,19 +66,26 @@ namespace Penguin.Robinhood.Models
 
             if (!string.IsNullOrWhiteSpace(a[9]))
             {
-                dp.Quote = new Quote();
-                dp.Quote.AskPrice = decimal.Parse(a[9]);
-                dp.Quote.BidPrice = decimal.Parse(a[10]);
-                dp.Quote.MarkPrice = decimal.Parse(a[11]);
-                dp.Quote.HighPrice = decimal.Parse(a[12]);
-                dp.Quote.LowPrice = decimal.Parse(a[13]);
-                dp.Quote.OpenPrice = decimal.Parse(a[14]);
-                dp.Quote.Symbol = a[15];
-                dp.Quote.Id = Guid.Parse(a[16]);
-                dp.Quote.Volume = decimal.Parse(a[17]);
+                dp.Quote = new Quote
+                {
+                    AskPrice = decimal.Parse(a[9]),
+                    BidPrice = decimal.Parse(a[10]),
+                    MarkPrice = decimal.Parse(a[11]),
+                    HighPrice = decimal.Parse(a[12]),
+                    LowPrice = decimal.Parse(a[13]),
+                    OpenPrice = decimal.Parse(a[14]),
+                    Symbol = a[15],
+                    Id = Guid.Parse(a[16]),
+                    Volume = decimal.Parse(a[17])
+                };
             }
 
             return dp;
+        }
+
+        public override string ToString()
+        {
+            return $"{this.BeginsAt?.Ticks}\t{(int)this.Interval}\t{this.OpenPrice}\t{this.ClosePrice}\t{this.HighPrice}\t{this.LowPrice}\t{this.Volume}\t{this.Session}\t{(this.Interpolated ? 0 : 1)}\t{this.Quote?.AskPrice}\t{this.Quote?.BidPrice}\t{this.Quote?.MarkPrice}\t{this.Quote?.HighPrice}\t{this.Quote?.LowPrice}\t{this.Quote?.OpenPrice}\t{this.Quote?.Symbol}\t{this.Quote?.Id}\t{this.Quote?.Volume}";
         }
     }
 }

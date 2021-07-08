@@ -12,27 +12,27 @@ namespace Penguin.Robinhood.Models
         [JsonProperty("bid_price")]
         public decimal BidPrice { get; set; }
 
-        [JsonProperty("mark_price")]
-        public decimal MarkPrice { get; set; }
-
         [JsonProperty("high_price")]
         public decimal HighPrice { get; set; }
-
-        [JsonProperty("low_price")]
-        public decimal LowPrice { get; set; }
-
-        [JsonProperty("open_price")]
-        public decimal OpenPrice { get; set; }
-
-        [JsonProperty("symbol")]
-        public string Symbol { get; set; }
 
         [JsonProperty("id")]
         public Guid Id { get; set; }
 
-        [JsonProperty("volume")]
-        public decimal Volume { get; set; }
+        [JsonProperty("low_price")]
+        public decimal LowPrice { get; set; }
+
+        [JsonProperty("mark_price")]
+        public decimal MarkPrice { get; set; }
+
+        [JsonProperty("open_price")]
+        public decimal OpenPrice { get; set; }
 
         decimal IPricePoint.Price => this.AskPrice;
+
+        [JsonProperty("symbol")]
+        public string Symbol { get; set; }
+
+        [JsonProperty("volume")]
+        public decimal Volume { get; set; }
     }
 }

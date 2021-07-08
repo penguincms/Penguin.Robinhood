@@ -17,24 +17,17 @@ namespace Penguin.Robinhood
 {
     public class RobinhoodClient : JsonClient, IDisposable
     {
-        protected override void Dispose(bool disposing)
-        {
-            this.LogWriter?.Dispose();
-
-            base.Dispose(disposing);
-        }
-
-        private IAuthenticationSettings Settings;
-
-        private static string LogDirectory
-        {
-            get
-            {
-                return Path.Combine(AppData, "Logs", $"{Process.GetCurrentProcess().ProcessName}");
-            }
-        }
+        public static readonly DictionaryFile Tickers = new DictionaryFile(Path.Combine(AppData, "Tickers.Cache"));
 
         public readonly LogWriter LogWriter;
+
+        public string Authority = "https://api.robinhood.com";
+
+        private const string AUTHORIZATION_HEADER = "Authorization";
+
+        private AuthenticationResponse Authentication;
+
+        private readonly IAuthenticationSettings Settings;
 
         public static string AppData
         {
@@ -51,64 +44,123 @@ namespace Penguin.Robinhood
             }
         }
 
-        public static readonly DictionaryFile Tickers = new DictionaryFile(Path.Combine(AppData, "Tickers.Cache"));
+        public IReadOnlyList<Account> Accounts { get; private set; }
 
-        public string Authority = "https://api.robinhood.com";
-        public string AuthUrl => $"{this.Authority}/oauth2/token/";
-        public string UserUrl => $"{this.Authority}/user/";
         public string AccountsUrl => $"https://nummus.robinhood.com/accounts/";
-        public string QuotesUrl => $"{this.Authority}/marketdata/forex/quotes/";
+
+        public string AuthUrl => $"{this.Authority}/oauth2/token/";
+
         public string HoldingUrl => $"https://nummus.robinhood.com/holdings/";
-
-        public string HistoricalUrl(IHasId Id)
-        {
-            if (Id is null)
-            {
-                throw new ArgumentNullException(nameof(Id));
-            }
-
-            return $"{this.Authority}/marketdata/forex/historicals/{Id.Id}/";
-        }
 
         public string OrderUrl => $"https://nummus.robinhood.com/orders/";
 
-        public string QuoteUrl(IHasId id)
+        public string QuotesUrl => $"{this.Authority}/marketdata/forex/quotes/";
+
+        public string UnifiedAccountUrl => $"https://phoenix.robinhood.com/accounts/unified";
+
+        public UserResponse User { get; private set; }
+
+        public string UserUrl => $"{this.Authority}/user/";
+
+        private static string LogDirectory => Path.Combine(AppData, "Logs", $"{Process.GetCurrentProcess().ProcessName}");
+
+        private string CachedAuthPath => Path.Combine(AppData, "Token.json");
+
+        public RobinhoodClient(IAuthenticationSettings settings)
         {
-            if (id is null)
+            if (settings is null)
             {
-                throw new ArgumentNullException(nameof(id));
+                throw new ArgumentNullException(nameof(settings));
             }
 
-            return $"{this.Authority}/marketdata/forex/quotes/{id.Id}/";
+            this.Settings = settings;
+
+            this.LogWriter = new LogWriter(new LogWriterSettings()
+            {
+                ObjectSerializationOverride = JsonConvert.SerializeObject,
+                OutputTarget = LogOutput.Debug | LogOutput.File,
+                Directory = LogDirectory
+            });
+
+            AuthenticationResponse existingAuth = null;
+
+            if (File.Exists(this.CachedAuthPath))
+            {
+                existingAuth = JsonConvert.DeserializeObject<AuthenticationResponse>(File.ReadAllText(this.CachedAuthPath));
+
+                if (existingAuth.IsExpired)
+                {
+                    existingAuth = null;
+                }
+            }
+
+            if (existingAuth is null)
+            {
+                this.RefreshSession();
+            }
+            else
+            {
+                this.Authentication = existingAuth;
+            }
+
+            this.User = this.DownloadJson<UserResponse>(this.UserUrl);
+
+            this.Accounts = this.DownloadJson<AccountsResponse>(this.AccountsUrl).Results;
         }
 
-        public IEnumerable<Holding> GetHoldings()
+        public static void CacheDataPoint(Guid id, DataPoint dp)
         {
-            return this.DownloadJson<HoldingsResponse>(this.HoldingUrl).Results;
+            IHasId ihid = new SymbolResponse()
+            {
+                Id = id
+            };
+
+            CacheDataPoint(ihid, dp);
         }
 
-        public Holding GetHolding(IHasId hasId)
+        public static void CacheDataPoint(IHasId id, DataPoint dp)
         {
-            List<Holding> holdings = this.GetHoldings().ToList();
+            if (dp is null)
+            {
+                throw new ArgumentNullException(nameof(dp));
+            }
 
-            return holdings.FirstOrDefault(r => string.Equals(r.Currency.Code, FindSymbol(hasId), StringComparison.OrdinalIgnoreCase));
+            string datapointcache = $"{id.DataPointDirectory()}.json";
+
+            using StreamWriter sw = new StreamWriter(datapointcache, true);
+
+            sw.WriteLine(dp.ToString());
         }
 
-        public AccountInformation GetAccountInformation()
+        public static string FindSymbol(IHasId id)
         {
-            AccountInformation toReturn = this.DownloadJson<AccountInformation>(this.UnifiedAccountUrl);
-
-            return toReturn;
+            return id is null ? throw new ArgumentNullException(nameof(id)) : FindSymbol(id.Id);
         }
 
-        /// <summary>
-        /// Buys the specified coin with the specified account
-        /// </summary>
-        /// <param name="account"></param>
-        /// <param name="toPurchase"></param>
-        /// <param name="usdAmount">Quantity to purchase. If max value, then uses all available funds</param>
-        /// <param name="price">if null, uses market. Otherwise, limit</param>
-        /// <returns></returns>
+        public static string FindSymbol(Guid id)
+        {
+            foreach (KeyValuePair<string, string> kvp in Tickers)
+            {
+                if (kvp.Value == $"{id}")
+                {
+                    return kvp.Key;
+                }
+            }
+
+            return null;
+        }
+
+        public static IEnumerable<DataPoint> GetCachedDataPoints(IHasId id)
+        {
+            DirectoryInfo cacheDir = id.DataPointDirectory();
+
+            string DataPointFile = $"{cacheDir.FullName}.json";
+
+            foreach (string line in File.ReadAllLines(DataPointFile))
+            {
+                yield return DataPoint.FromString(line);
+            }
+        }
 
         public OrderResponse Buy(Account account, IHasId toPurchase, decimal usdAmount, decimal? price = null)
         {
@@ -156,145 +208,80 @@ namespace Penguin.Robinhood
             return this.UploadJson<OrderResponse>(this.OrderUrl, order);
         }
 
-        public OrderResponse Sell(Account account, IHasId toSell, decimal unitsToSell, decimal? price = null)
+        public override T DownloadJson<T>(string url, JsonSerializerSettings downloadSerializerSettings = null)
         {
-            if (account is null)
+            T toReturn = default;
+
+            do
             {
-                throw new ArgumentNullException(nameof(account));
-            }
-
-            if (toSell is null)
-            {
-                throw new ArgumentNullException(nameof(toSell));
-            }
-
-            decimal? sellPrice = price;
-
-            if (unitsToSell == decimal.MaxValue)
-            {
-                unitsToSell = this.GetHolding(toSell).QuantityAvailable;
-            }
-
-            if (sellPrice is null)
-            {
-                Quote quote = this.DownloadJson<Quote>(this.QuoteUrl(toSell));
-
-                sellPrice = quote.AskPrice;
-            }
-
-            Order order = new Order
-            {
-                AccountId = account.Id,
-                CurrencyPairId = toSell.Id,
-                Price = sellPrice.Value,
-                Quantity = unitsToSell,
-                Side = "sell",
-                Type = price is null ? "market" : "limit"
-            };
-
-            return this.UploadJson<OrderResponse>(this.OrderUrl, order);
-        }
-
-        public string SearchUrl(string query)
-        {
-            return $"https://bonfire.robinhood.com/deprecated_search/?query={query}&user_origin=US";
-        }
-
-        public static IEnumerable<DataPoint> GetCachedDataPoints(IHasId id)
-        {
-            DirectoryInfo cacheDir = id.DataPointDirectory();
-
-            string DataPointFile = $"{cacheDir.FullName}.json";
-
-            foreach(string line in File.ReadAllLines(DataPointFile))
-            {
-                yield return DataPoint.FromString(line);
-            }
-        }
-
-        public UserResponse User { get; private set; }
-
-        private AuthenticationResponse Authentication;
-
-        public IReadOnlyList<Account> Accounts { get; private set; }
-
-        public string UnifiedAccountUrl => $"https://phoenix.robinhood.com/accounts/unified";
-
-        protected override void PreRequest(Uri url)
-        {
-            this.Headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36";
-
-            if (this.Authentication != null)
-            {
-                this.Headers[AUTHORIZATION_HEADER] = $"Bearer {this.Authentication.AccessToken}";
-            } else
-            {
-                if (this.Headers.AllKeys.Contains(AUTHORIZATION_HEADER))
+                try
                 {
-
-                    this.Headers.Remove(AUTHORIZATION_HEADER);
+                    toReturn = this.LogWebException(() => base.DownloadJson<T>(url, downloadSerializerSettings));
+                    break;
                 }
-            }
-        }
-        const string AUTHORIZATION_HEADER = "Authorization";
-
-        private string CachedAuthPath => Path.Combine(AppData, "Token.json");
-
-        public RobinhoodClient(IAuthenticationSettings settings)
-        {
-            if (settings is null)
-            {
-                throw new ArgumentNullException(nameof(settings));
-            }
-
-            this.Settings = settings;
-
-            this.LogWriter = new LogWriter(LogDirectory, LogOutput.Debug | LogOutput.File)
-            {
-                ObjectSerializationOverride = JsonConvert.SerializeObject
-            };
-
-
-
-            AuthenticationResponse existingAuth = null;
-
-            if (File.Exists(CachedAuthPath))
-            {
-                existingAuth = JsonConvert.DeserializeObject<AuthenticationResponse>(File.ReadAllText(CachedAuthPath));
-
-                if (existingAuth.IsExpired)
+                catch (SessionExpiredException sex)
                 {
-                    existingAuth = null;
+                    this.RefreshSession();
                 }
-            }
+            } while (true);
 
-            if (existingAuth is null)
-            {
-                this.RefreshSession();
-            }
-            else
-            {
-                this.Authentication = existingAuth;
-            }
+            this.TryLog(toReturn);
 
-            this.User = this.DownloadJson<UserResponse>(this.UserUrl);
-
-            this.Accounts = this.DownloadJson<AccountsResponse>(this.AccountsUrl).Results;
+            return toReturn;
         }
 
-        public void RefreshSession()
+        public FindResponse Find(string query)
         {
-            this.Authentication = null;
+            return this.DownloadJson<FindResponse>(this.SearchUrl(query));
+        }
 
-            this.Authentication = this.UploadJson<AuthenticationResponse>(this.AuthUrl, new AuthenticationRequest()
+        public CurrencyPair FindCurrency(string query, CurrencyMatch match = CurrencyMatch.CodeOrName)
+        {
+            List<CurrencyPair> pairs = this.Find(query).CurrencyPairs.ToList();
+
+            List<CurrencyPair> results = new List<CurrencyPair>();
+
+            if (match.HasFlag(CurrencyMatch.Code))
             {
-                ClientId = this.Settings.ClientId,
-                DeviceToken = this.Settings.DeviceToken,
-                Password = this.Settings.Password,
-                Username = this.Settings.Username
-            });
+                results.AddRange(pairs.Where(c => string.Equals(c.AssetCurrency.Code, query, StringComparison.OrdinalIgnoreCase)));
+            }
 
-            File.WriteAllText(CachedAuthPath, JsonConvert.SerializeObject(this.Authentication, Formatting.Indented));
+            if (match.HasFlag(CurrencyMatch.Name))
+            {
+                results.AddRange(pairs.Where(c => string.Equals(c.AssetCurrency.Name, query, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            return results.Distinct().SingleOrDefault();
+        }
+
+        public IHasId FindId(string query, CurrencyMatch currencyMatch = CurrencyMatch.CodeOrName)
+        {
+            if (query is null)
+            {
+                throw new ArgumentNullException(nameof(query));
+            }
+
+            if (!Tickers.TryGetValue(query.ToUpper(), out string Id))
+            {
+                CurrencyPair pair = this.FindCurrency(query, currencyMatch);
+
+                Id = pair.Id;
+
+                Tickers.Add(pair.AssetCurrency.Code, Id);
+            }
+
+            return new SymbolResponse()
+            {
+                Id = Guid.Parse(Id),
+                Symbol = query.ToUpper()
+            };
+        }
+
+        public AccountInformation GetAccountInformation()
+        {
+            AccountInformation toReturn = this.DownloadJson<AccountInformation>(this.UnifiedAccountUrl);
+
+            return toReturn;
         }
 
         public DataPoint GetDataPoint(IHasId id, DateTime datePointTime, HistoricalInterval interval, bool cacheOnly = false)
@@ -367,97 +354,81 @@ namespace Penguin.Robinhood
             return null;
         }
 
-        private void TryLog(object o)
+        public Holding GetHolding(IHasId hasId)
         {
-            try
+            List<Holding> holdings = this.GetHoldings().ToList();
+
+            return holdings.FirstOrDefault(r => string.Equals(r.Currency.Code, FindSymbol(hasId), StringComparison.OrdinalIgnoreCase));
+        }
+
+        public IEnumerable<Holding> GetHoldings()
+        {
+            return this.DownloadJson<HoldingsResponse>(this.HoldingUrl).Results;
+        }
+
+        public Quote GetQuote(IHasId id)
+        {
+            Quote q = this.DownloadJson<Quote>(this.QuoteUrl(id));
+
+            DataPoint dp = new DataPoint()
             {
-                this.LogWriter.WriteLine(o);
-            }
-            catch (Exception ex)
+                BeginsAt = DateTime.Now,
+                ClosePrice = q.BidPrice,
+                HighPrice = q.HighPrice,
+                LowPrice = q.LowPrice,
+                Interval = HistoricalInterval._1Second,
+                Session = "reg",
+                Volume = 0,
+                OpenPrice = q.AskPrice,
+                Quote = q
+            };
+
+            CacheDataPoint(id, dp);
+
+            return q;
+        }
+
+        public IEnumerable<Quote> GetQuotes(QuoteRequest request)
+        {
+            foreach (Quote quote in this.UploadJson<QuotesResponse>(this.QuotesUrl, request).Results)
             {
-                this.LogWriter.WriteLine("An exception occured while logging.");
-                this.LogWriter.WriteLine(ex.Message);
-                this.LogWriter.WriteLine(ex.StackTrace);
+                Tickers.TryAdd(quote.Symbol, $"{quote.Id}");
+
+                yield return quote;
             }
         }
 
-        private T LogWebException<T>(Func<T> toExecute)
+        public IEnumerable<Quote> GetQuotes(IEnumerable<IHasId> Ids)
         {
-            try
+            return this.GetQuotes(new QuoteRequest()
             {
-                return toExecute.Invoke();
-            }
-            catch (WebException wex) when (wex.Response != null)
-            {
-                using (StreamReader r = new StreamReader(wex.Response.GetResponseStream()))
-                {
-                    string responseContent = r.ReadToEnd();
-
-                    if (responseContent.Contains("Invalid JWT. Signature has expired"))
-                    {
-                        throw new SessionExpiredException();
-                    }
-
-                    this.LogWriter.WriteLine(responseContent);
-                }
-
-                throw;
-            }
+                Ids = Ids.ToList()
+            });
         }
 
-        public override string UploadJson(string url, string toUpload)
+        public string HistoricalUrl(IHasId Id)
         {
-            this.TryLog(toUpload);
-
-            string toReturn = this.LogWebException(() => base.UploadJson(url, toUpload));
-
-            this.TryLog(toReturn);
-
-            return toReturn;
+            return Id is null ? throw new ArgumentNullException(nameof(Id)) : $"{this.Authority}/marketdata/forex/historicals/{Id.Id}/";
         }
 
-        public override T UploadJson<T>(string url, object toUpload, JsonSerializerSettings downloadSerializerSettings = null, JsonSerializerSettings uploadSerializerSettings = null)
+        public string QuoteUrl(IHasId id)
         {
-            this.TryLog(toUpload);
-            T toReturn = default;
-
-            do
-            {
-                try
-                {
-                    toReturn = this.LogWebException(() => base.UploadJson<T>(url, toUpload, downloadSerializerSettings, uploadSerializerSettings));
-                    break;
-                }
-                catch (SessionExpiredException sex)
-                {
-                    this.RefreshSession();
-                }
-            } while (true);
-            this.TryLog(toReturn);
-
-            return toReturn;
+            return id is null ? throw new ArgumentNullException(nameof(id)) : $"{this.Authority}/marketdata/forex/quotes/{id.Id}/";
         }
 
-        public override T DownloadJson<T>(string url, JsonSerializerSettings downloadSerializerSettings = null)
+        public void RefreshSession()
         {
-            T toReturn = default;
+            this.Authentication = null;
 
-            do
+            this.Authentication = this.UploadJson<AuthenticationResponse>(this.AuthUrl, new AuthenticationRequest()
             {
-                try
-                {
-                    toReturn = this.LogWebException(() => base.DownloadJson<T>(url, downloadSerializerSettings));
-                    break;
-                }
-                catch (SessionExpiredException sex)
-                {
-                    this.RefreshSession();
-                }
-            } while (true);
+                ClientId = this.Settings.ClientId,
+                DeviceToken = this.Settings.DeviceToken,
+                Password = this.Settings.Password,
+                Username = this.Settings.Username
+            });
 
-            this.TryLog(toReturn);
-
-            return toReturn;
+            File.WriteAllText(this.CachedAuthPath, JsonConvert.SerializeObject(this.Authentication, Formatting.Indented));
         }
 
         public HistoricalResponse RequestHistorical(IHasId id, HistoricalSpan span, HistoricalInterval interval, HistoricalBounds bounds = HistoricalBounds._24_7)
@@ -500,138 +471,151 @@ namespace Penguin.Robinhood
             return response;
         }
 
-        public static void CacheDataPoint(Guid id, DataPoint dp)
+        public string SearchUrl(string query)
         {
-            IHasId ihid = new SymbolResponse()
+            return $"https://bonfire.robinhood.com/deprecated_search/?query={query}&user_origin=US";
+        }
+
+        /// <summary>
+        /// Buys the specified coin with the specified account
+        /// </summary>
+        /// <param name="account"></param>
+        /// <param name="toPurchase"></param>
+        /// <param name="usdAmount">Quantity to purchase. If max value, then uses all available funds</param>
+        /// <param name="price">if null, uses market. Otherwise, limit</param>
+        /// <returns></returns>
+        public OrderResponse Sell(Account account, IHasId toSell, decimal unitsToSell, decimal? price = null)
+        {
+            if (account is null)
             {
-                Id = id
+                throw new ArgumentNullException(nameof(account));
+            }
+
+            if (toSell is null)
+            {
+                throw new ArgumentNullException(nameof(toSell));
+            }
+
+            decimal? sellPrice = price;
+
+            if (unitsToSell == decimal.MaxValue)
+            {
+                unitsToSell = this.GetHolding(toSell).QuantityAvailable;
+            }
+
+            if (sellPrice is null)
+            {
+                Quote quote = this.DownloadJson<Quote>(this.QuoteUrl(toSell));
+
+                sellPrice = quote.AskPrice;
+            }
+
+            Order order = new Order
+            {
+                AccountId = account.Id,
+                CurrencyPairId = toSell.Id,
+                Price = sellPrice.Value,
+                Quantity = unitsToSell,
+                Side = "sell",
+                Type = price is null ? "market" : "limit"
             };
 
-            CacheDataPoint(ihid, dp);
+            return this.UploadJson<OrderResponse>(this.OrderUrl, order);
         }
 
-        public static void CacheDataPoint(IHasId id, DataPoint dp)
+        public override string UploadJson(string url, string toUpload)
         {
-            if (dp is null)
-            {
-                throw new ArgumentNullException(nameof(dp));
-            }
+            this.TryLog(toUpload);
 
-            string datapointcache = $"{id.DataPointDirectory()}.json";
+            string toReturn = this.LogWebException(() => base.UploadJson(url, toUpload));
 
-            using StreamWriter sw = new StreamWriter(datapointcache, true);
+            this.TryLog(toReturn);
 
-            sw.WriteLine(dp.ToString());
+            return toReturn;
         }
 
-        public IEnumerable<Quote> GetQuotes(QuoteRequest request)
+        public override T UploadJson<T>(string url, object toUpload, JsonSerializerSettings downloadSerializerSettings = null, JsonSerializerSettings uploadSerializerSettings = null)
         {
-            foreach (Quote quote in this.UploadJson<QuotesResponse>(this.QuotesUrl, request).Results)
+            this.TryLog(toUpload);
+            T toReturn = default;
+
+            do
             {
-                Tickers.TryAdd(quote.Symbol, $"{quote.Id}");
-
-                yield return quote;
-            }
-        }
-
-        public Quote GetQuote(IHasId id)
-        {
-            Quote q = this.DownloadJson<Quote>(this.QuoteUrl(id));
-
-            DataPoint dp = new DataPoint()
-            {
-                BeginsAt = DateTime.Now,
-                ClosePrice = q.BidPrice,
-                HighPrice = q.HighPrice,
-                LowPrice = q.LowPrice,
-                Interval = HistoricalInterval._1Second,
-                Session = "reg",
-                Volume = 0,
-                OpenPrice = q.AskPrice,
-                Quote = q
-            };
-
-            CacheDataPoint(id, dp);
-
-            return q;
-        }
-
-        public static string FindSymbol(IHasId id)
-        {
-            if (id is null)
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
-            return FindSymbol(id.Id);
-        }
-
-        public static string FindSymbol(Guid id)
-        {
-            foreach (KeyValuePair<string, string> kvp in Tickers)
-            {
-                if (kvp.Value == $"{id}")
+                try
                 {
-                    return kvp.Key;
+                    toReturn = this.LogWebException(() => base.UploadJson<T>(url, toUpload, downloadSerializerSettings, uploadSerializerSettings));
+                    break;
+                }
+                catch (SessionExpiredException sex)
+                {
+                    this.RefreshSession();
+                }
+            } while (true);
+            this.TryLog(toReturn);
+
+            return toReturn;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            this.LogWriter?.Dispose();
+
+            base.Dispose(disposing);
+        }
+
+        protected override void PreRequest(Uri url)
+        {
+            this.Headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36";
+
+            if (this.Authentication != null)
+            {
+                this.Headers[AUTHORIZATION_HEADER] = $"Bearer {this.Authentication.AccessToken}";
+            }
+            else
+            {
+                if (this.Headers.AllKeys.Contains(AUTHORIZATION_HEADER))
+                {
+                    this.Headers.Remove(AUTHORIZATION_HEADER);
                 }
             }
-
-            return null;
         }
 
-        public FindResponse Find(string query)
+        private T LogWebException<T>(Func<T> toExecute)
         {
-            return this.DownloadJson<FindResponse>(this.SearchUrl(query));
+            try
+            {
+                return toExecute.Invoke();
+            }
+            catch (WebException wex) when (wex.Response != null)
+            {
+                using (StreamReader r = new StreamReader(wex.Response.GetResponseStream()))
+                {
+                    string responseContent = r.ReadToEnd();
+
+                    if (responseContent.Contains("Invalid JWT. Signature has expired"))
+                    {
+                        throw new SessionExpiredException();
+                    }
+
+                    this.LogWriter.WriteLine(responseContent);
+                }
+
+                throw;
+            }
         }
 
-        public CurrencyPair FindCurrency(string query, CurrencyMatch match = CurrencyMatch.CodeOrName)
+        private void TryLog(object o)
         {
-            List<CurrencyPair> pairs = this.Find(query).CurrencyPairs.ToList();
-
-            List<CurrencyPair> results = new List<CurrencyPair>();
-
-            if (match.HasFlag(CurrencyMatch.Code))
+            try
             {
-                results.AddRange(pairs.Where(c => string.Equals(c.AssetCurrency.Code, query, StringComparison.OrdinalIgnoreCase)));
+                this.LogWriter.WriteLine(o);
             }
-
-            if (match.HasFlag(CurrencyMatch.Name))
+            catch (Exception ex)
             {
-                results.AddRange(pairs.Where(c => string.Equals(c.AssetCurrency.Name, query, StringComparison.OrdinalIgnoreCase)));
+                this.LogWriter.WriteLine("An exception occured while logging.");
+                this.LogWriter.WriteLine(ex.Message);
+                this.LogWriter.WriteLine(ex.StackTrace);
             }
-
-            return results.Distinct().SingleOrDefault();
-        }
-
-        public IHasId FindId(string query, CurrencyMatch currencyMatch = CurrencyMatch.CodeOrName)
-        {
-            if (query is null)
-            {
-                throw new ArgumentNullException(nameof(query));
-            }
-
-            if (!Tickers.TryGetValue(query.ToUpper(), out string Id))
-            {
-                CurrencyPair pair = this.FindCurrency(query, currencyMatch);
-
-                Id = pair.Id;
-
-                Tickers.Add(pair.AssetCurrency.Code, Id);
-            }
-
-            return new SymbolResponse()
-            {
-                Id = Guid.Parse(Id),
-                Symbol = query.ToUpper()
-            };
-        }
-
-        public IEnumerable<Quote> GetQuotes(IEnumerable<IHasId> Ids)
-        {
-            return this.GetQuotes(new QuoteRequest()
-            {
-                Ids = Ids.ToList()
-            });
         }
     }
 }

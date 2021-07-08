@@ -3,6 +3,30 @@ using Penguin.Web.Http.Attributes;
 
 namespace Penguin.Robinhood.Models
 {
+    public class HistoricalRequest : HttpQuery
+    {
+        [IgnoreQueryProperty]
+        public HistoricalBounds Bounds { get; set; } = HistoricalBounds._24_7;
+
+        [IgnoreQueryProperty]
+        public string Id { get; set; }
+
+        [IgnoreQueryProperty]
+        public HistoricalInterval Interval { get; set; }
+
+        [IgnoreQueryProperty]
+        public HistoricalSpan Span { get; set; }
+
+        [HttpQueryProperty("bounds")]
+        public string StrBounds => this.Bounds.ToString().Trim('_').ToLower();
+
+        [HttpQueryProperty("interval")]
+        public string StrInterval => this.Interval.ToString().Trim('_').ToLower();
+
+        [HttpQueryProperty("span")]
+        public string StrSpan => this.Span.ToString().Trim('_').ToLower();
+    }
+
     public enum HistoricalBounds
     {
         _24_7
@@ -27,29 +51,5 @@ namespace Penguin.Robinhood.Models
         _Month = 720,
         _Week = 168,
         _Hour = 1
-    }
-
-    public class HistoricalRequest : HttpQuery
-    {
-        [IgnoreQueryProperty]
-        public string Id { get; set; }
-
-        [IgnoreQueryProperty]
-        public HistoricalBounds Bounds { get; set; } = HistoricalBounds._24_7;
-
-        [IgnoreQueryProperty]
-        public HistoricalInterval Interval { get; set; }
-
-        [IgnoreQueryProperty]
-        public HistoricalSpan Span { get; set; }
-
-        [HttpQueryProperty("bounds")]
-        public string StrBounds => this.Bounds.ToString().Trim('_').ToLower();
-
-        [HttpQueryProperty("interval")]
-        public string StrInterval => this.Interval.ToString().Trim('_').ToLower();
-
-        [HttpQueryProperty("span")]
-        public string StrSpan => this.Span.ToString().Trim('_').ToLower();
     }
 }

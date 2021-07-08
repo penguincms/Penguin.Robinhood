@@ -16,13 +16,13 @@ namespace Penguin.Robinhood.Models
         [JsonProperty("grant_type")]
         public string GrantType { get; set; } = "password";
 
+        [JsonProperty("password")]
+        public string Password { get; set; }
+
         [JsonProperty("scope")]
         public string Scope { get; set; } = "internal";
 
         [JsonProperty("username")]
         public string Username { get; set; }
-
-        [JsonProperty("password")]
-        public string Password { get; set; }
     }
 }

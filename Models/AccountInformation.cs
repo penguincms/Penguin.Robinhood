@@ -3,61 +3,6 @@ using System;
 
 namespace Penguin.Robinhood.Models
 {
-    // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse);
-    public class CurrencyAmount
-    {
-        [JsonProperty("currency_code")]
-        public string CurrencyCode { get; set; }
-
-        [JsonProperty("currency_id")]
-        public Guid CurrencyId { get; set; }
-
-        [JsonProperty("amount")]
-        public decimal Amount { get; set; }
-    }
-
-    public class Crypto
-    {
-        [JsonProperty("equity")]
-        public CurrencyAmount Equity { get; set; }
-
-        [JsonProperty("market_value")]
-        public CurrencyAmount MarketValue { get; set; }
-
-        [JsonProperty("opened_at")]
-        public DateTime OpenedAt { get; set; }
-    }
-
-    public class Equities
-    {
-        [JsonProperty("active_subscription_id")]
-        public object ActiveSubscriptionId { get; set; }
-
-        [JsonProperty("apex_account_number")]
-        public object ApexAccountNumber { get; set; }
-
-        [JsonProperty("available_margin")]
-        public object AvailableMargin { get; set; }
-
-        [JsonProperty("equity")]
-        public CurrencyAmount Equity { get; set; }
-
-        [JsonProperty("margin_maintenance")]
-        public CurrencyAmount MarginMaintenance { get; set; }
-
-        [JsonProperty("market_value")]
-        public CurrencyAmount MarketValue { get; set; }
-
-        [JsonProperty("opened_at")]
-        public DateTime OpenedAt { get; set; }
-
-        [JsonProperty("rhs_account_number")]
-        public string RhsAccountNumber { get; set; }
-
-        [JsonProperty("total_margin")]
-        public CurrencyAmount TotalMargin { get; set; }
-    }
-
     public class AccountInformation
     {
         [JsonProperty("account_buying_power")]
@@ -140,5 +85,60 @@ namespace Penguin.Robinhood.Models
 
         [JsonProperty("withdrawable_cash")]
         public CurrencyAmount WithdrawableCash { get; set; }
+    }
+
+    public class Crypto
+    {
+        [JsonProperty("equity")]
+        public CurrencyAmount Equity { get; set; }
+
+        [JsonProperty("market_value")]
+        public CurrencyAmount MarketValue { get; set; }
+
+        [JsonProperty("opened_at")]
+        public DateTime OpenedAt { get; set; }
+    }
+
+    // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse);
+    public class CurrencyAmount
+    {
+        [JsonProperty("amount")]
+        public decimal Amount { get; set; }
+
+        [JsonProperty("currency_code")]
+        public string CurrencyCode { get; set; }
+
+        [JsonProperty("currency_id")]
+        public Guid CurrencyId { get; set; }
+    }
+
+    public class Equities
+    {
+        [JsonProperty("active_subscription_id")]
+        public object ActiveSubscriptionId { get; set; }
+
+        [JsonProperty("apex_account_number")]
+        public object ApexAccountNumber { get; set; }
+
+        [JsonProperty("available_margin")]
+        public object AvailableMargin { get; set; }
+
+        [JsonProperty("equity")]
+        public CurrencyAmount Equity { get; set; }
+
+        [JsonProperty("margin_maintenance")]
+        public CurrencyAmount MarginMaintenance { get; set; }
+
+        [JsonProperty("market_value")]
+        public CurrencyAmount MarketValue { get; set; }
+
+        [JsonProperty("opened_at")]
+        public DateTime OpenedAt { get; set; }
+
+        [JsonProperty("rhs_account_number")]
+        public string RhsAccountNumber { get; set; }
+
+        [JsonProperty("total_margin")]
+        public CurrencyAmount TotalMargin { get; set; }
     }
 }

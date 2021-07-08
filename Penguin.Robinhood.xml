@@ -4,7 +4,7 @@
         <name>Penguin.Robinhood</name>
     </assembly>
     <members>
-        <member name="M:Penguin.Robinhood.RobinhoodClient.Buy(Penguin.Robinhood.Models.Account,Penguin.Robinhood.Interfaces.IHasId,System.Decimal,System.Nullable{System.Decimal})">
+        <member name="M:Penguin.Robinhood.RobinhoodClient.Sell(Penguin.Robinhood.Models.Account,Penguin.Robinhood.Interfaces.IHasId,System.Decimal,System.Nullable{System.Decimal})">
             <summary>
             Buys the specified coin with the specified account
             </summary>

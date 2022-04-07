@@ -9,9 +9,9 @@
     <Description>Not Available</Description>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Penguin.Web.Http" Version="5.0.6-TATDFB4" />
-    <PackageReference Include="Penguin.Web.JsonClient" Version="5.0.6-TATDFB4" />
-    <PackageReference Include="Penguin.Collections" Version="5.0.6-TAUDTN4" />
+    <PackageReference Include="Penguin.Web.Http" Version="5.0.6-TAVV3GD" />
+    <PackageReference Include="Penguin.Web.JsonClient" Version="5.0.6-TAVV3GD" />
+    <PackageReference Include="Penguin.Collections" Version="5.0.6-TAVV3GD" />
   </ItemGroup>
   <Import Project="Penguin.Projects.Shared\Penguin.Projects.Shared.csproj" />
 </Project>

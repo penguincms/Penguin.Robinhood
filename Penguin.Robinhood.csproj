@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <PackageProjectUrl>https://github.com/PenguinCms/Penguin.Robinhood</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/PenguinCMS/Penguin.Robinhood</PackageProjectUrl>
     <DocumentationFile>Penguin.Robinhood.xml</DocumentationFile>
     <Version>5.0.5</Version>
     <AssemblyName>Penguin.Robinhood</AssemblyName>
@@ -9,9 +9,9 @@
     <Description>Not Available</Description>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Penguin.Web.Http" Version="5.0.6-TAZCES9" />
-    <PackageReference Include="Penguin.Web.JsonClient" Version="5.0.6-TAZCES9" />
-    <PackageReference Include="Penguin.Collections" Version="5.0.6-TAZCES9" />
-</ItemGroup>
+    <PackageReference Include="Penguin.Web.Http" Version="5.0.6-TB0DVI6" />
+    <PackageReference Include="Penguin.Web.JsonClient" Version="5.0.6-TB0DVI6" />
+    <PackageReference Include="Penguin.Collections" Version="5.0.6-TB0DVI6" />
+  </ItemGroup>
   <Import Project="Penguin.Projects.Shared\Penguin.Projects.Shared.csproj" />
 </Project>

@@ -219,7 +219,7 @@ namespace Penguin.Robinhood
                     toReturn = this.LogWebException(() => base.DownloadJson<T>(url, downloadSerializerSettings));
                     break;
                 }
-                catch (SessionExpiredException sex)
+                catch (SessionExpiredException)
                 {
                     this.RefreshSession();
                 }

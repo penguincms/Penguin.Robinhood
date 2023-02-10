@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <PackageProjectUrl>https://github.com/PenguinCMS/Penguin.Robinhood</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/PenguinCms/Penguin.Robinhood</PackageProjectUrl>
     <DocumentationFile>Penguin.Robinhood.xml</DocumentationFile>
     <Version>5.0.5</Version>
     <AssemblyName>Penguin.Robinhood</AssemblyName>
     <RootNamespace>Penguin.Robinhood</RootNamespace>
     <Description>Not Available</Description>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Penguin.Collections\Penguin.Collections.Local.csproj" />

@@ -35,6 +35,7 @@ namespace Penguin.Robinhood.Models
         public virtual decimal? OpenPrice { get; set; }
 
         decimal IPricePoint.Price => OpenPrice.Value;
+
         public Quote Quote { get; set; }
 
         [JsonProperty("session")]

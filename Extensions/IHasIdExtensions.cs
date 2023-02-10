@@ -21,22 +21,14 @@ namespace Penguin.Robinhood.Extensions
 
         public static FileInfo DataPointFile(this IHasId id, DataPoint dp)
         {
-            if (id is null)
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
-            if (dp is null)
-            {
-                throw new ArgumentNullException(nameof(dp));
-            }
-
-            return id.DataPointFile(dp.BeginsAt.Value, dp.Interval);
+            return id is null
+                ? throw new ArgumentNullException(nameof(id))
+                : dp is null ? throw new ArgumentNullException(nameof(dp)) : id.DataPointFile(dp.BeginsAt.Value, dp.Interval);
         }
 
         public static FileInfo DataPointFile(this IHasId id, DateTime datePointTime, HistoricalInterval interval)
         {
-            DateTime parsedRequest = new DateTime(datePointTime.Year, datePointTime.Month, datePointTime.Day, datePointTime.Hour, datePointTime.Minute, datePointTime.Second);
+            DateTime parsedRequest = new(datePointTime.Year, datePointTime.Month, datePointTime.Day, datePointTime.Hour, datePointTime.Minute, datePointTime.Second);
 
             string fullName = Path.Combine(id.DataPointDirectory().FullName, $"{parsedRequest.Ticks}{interval}.json");
 

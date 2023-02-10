@@ -29,7 +29,7 @@ namespace Penguin.Robinhood.Models
         public int ExpiresIn { get; set; }
 
         [JsonIgnore]
-        public bool IsExpired => DateTime.Now > this.CreatedAt.AddMinutes(this.ExpiresIn - 10);
+        public bool IsExpired => DateTime.Now > CreatedAt.AddMinutes(ExpiresIn - 10);
 
         [JsonProperty("mfa_code")]
         public object MfaCode { get; set; }

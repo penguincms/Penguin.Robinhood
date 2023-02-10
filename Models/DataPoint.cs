@@ -10,15 +10,15 @@ namespace Penguin.Robinhood.Models
         public DateTime? BeginsAt { get; set; }
 
         [JsonIgnore]
-        public long BeginsTicks => this.BeginsAt?.Ticks ?? 0;
+        public long BeginsTicks => BeginsAt?.Ticks ?? 0;
 
         [JsonProperty("close_price")]
         public decimal? ClosePrice { get; set; }
 
-        public DateTime? EndsAt => this.BeginsAt?.AddMinutes((int)this.Interval);
+        public DateTime? EndsAt => BeginsAt?.AddMinutes((int)Interval);
 
         [JsonIgnore]
-        public long EndsTicks => this.EndsAt?.Ticks ?? 0;
+        public long EndsTicks => EndsAt?.Ticks ?? 0;
 
         [JsonProperty("high_price")]
         public decimal? HighPrice { get; set; }
@@ -34,7 +34,7 @@ namespace Penguin.Robinhood.Models
         [JsonProperty("open_price")]
         public virtual decimal? OpenPrice { get; set; }
 
-        decimal IPricePoint.Price => this.OpenPrice.Value;
+        decimal IPricePoint.Price => OpenPrice.Value;
         public Quote Quote { get; set; }
 
         [JsonProperty("session")]
@@ -50,7 +50,7 @@ namespace Penguin.Robinhood.Models
                 throw new ArgumentNullException(nameof(line));
             }
 
-            DataPoint dp = new DataPoint();
+            DataPoint dp = new();
 
             string[] a = line.Split('\t');
 
@@ -85,7 +85,7 @@ namespace Penguin.Robinhood.Models
 
         public override string ToString()
         {
-            return $"{this.BeginsAt?.Ticks}\t{(int)this.Interval}\t{this.OpenPrice}\t{this.ClosePrice}\t{this.HighPrice}\t{this.LowPrice}\t{this.Volume}\t{this.Session}\t{(this.Interpolated ? 0 : 1)}\t{this.Quote?.AskPrice}\t{this.Quote?.BidPrice}\t{this.Quote?.MarkPrice}\t{this.Quote?.HighPrice}\t{this.Quote?.LowPrice}\t{this.Quote?.OpenPrice}\t{this.Quote?.Symbol}\t{this.Quote?.Id}\t{this.Quote?.Volume}";
+            return $"{BeginsAt?.Ticks}\t{(int)Interval}\t{OpenPrice}\t{ClosePrice}\t{HighPrice}\t{LowPrice}\t{Volume}\t{Session}\t{(Interpolated ? 0 : 1)}\t{Quote?.AskPrice}\t{Quote?.BidPrice}\t{Quote?.MarkPrice}\t{Quote?.HighPrice}\t{Quote?.LowPrice}\t{Quote?.OpenPrice}\t{Quote?.Symbol}\t{Quote?.Id}\t{Quote?.Volume}";
         }
     }
 }

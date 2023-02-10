@@ -13,6 +13,6 @@ namespace Penguin.Robinhood.Models
         public List<IHasId> Ids { get; set; } = new List<IHasId>();
 
         [HttpQueryProperty("ids")]
-        public string IdString => string.Join("%2C", this.Ids.Select(i => i.Id));
+        public string IdString => string.Join("%2C", Ids.Select(i => i.Id));
     }
 }

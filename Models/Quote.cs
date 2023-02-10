@@ -27,7 +27,7 @@ namespace Penguin.Robinhood.Models
         [JsonProperty("open_price")]
         public decimal OpenPrice { get; set; }
 
-        decimal IPricePoint.Price => this.AskPrice;
+        decimal IPricePoint.Price => AskPrice;
 
         [JsonProperty("symbol")]
         public string Symbol { get; set; }

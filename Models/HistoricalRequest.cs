@@ -18,12 +18,12 @@ namespace Penguin.Robinhood.Models
         public HistoricalSpan Span { get; set; }
 
         [HttpQueryProperty("bounds")]
-        public string StrBounds => Bounds.ToString().Trim('_').ToLower();
+        public string StrBounds => Bounds.ToString().Trim('_').ToLower(System.Globalization.CultureInfo.CurrentCulture);
 
         [HttpQueryProperty("interval")]
-        public string StrInterval => Interval.ToString().Trim('_').ToLower();
+        public string StrInterval => Interval.ToString().Trim('_').ToLower(System.Globalization.CultureInfo.CurrentCulture);
 
         [HttpQueryProperty("span")]
-        public string StrSpan => Span.ToString().Trim('_').ToLower();
+        public string StrSpan => Span.ToString().Trim('_').ToLower(System.Globalization.CultureInfo.CurrentCulture);
     }
 }

@@ -17,7 +17,7 @@ namespace Penguin.Robinhood
 {
     public class RobinhoodClient : JsonClient, IDisposable
     {
-        public static readonly DictionaryFile Tickers = new DictionaryFile(Path.Combine(AppData, "Tickers.Cache"));
+        public static readonly DictionaryFile Tickers = new(Path.Combine(AppData, "Tickers.Cache"));
 
         public readonly LogWriter LogWriter;
 
@@ -37,7 +37,7 @@ namespace Penguin.Robinhood
 
                 if (!Directory.Exists(directory))
                 {
-                    Directory.CreateDirectory(directory);
+                    _ = Directory.CreateDirectory(directory);
                 }
 
                 return directory;
@@ -46,25 +46,25 @@ namespace Penguin.Robinhood
 
         public IReadOnlyList<Account> Accounts { get; private set; }
 
-        public string AccountsUrl => $"https://nummus.robinhood.com/accounts/";
+        public static string AccountsUrl => $"https://nummus.robinhood.com/accounts/";
 
-        public string AuthUrl => $"{this.Authority}/oauth2/token/";
+        public string AuthUrl => $"{Authority}/oauth2/token/";
 
-        public string HoldingUrl => $"https://nummus.robinhood.com/holdings/";
+        public static string HoldingUrl => $"https://nummus.robinhood.com/holdings/";
 
-        public string OrderUrl => $"https://nummus.robinhood.com/orders/";
+        public static string OrderUrl => $"https://nummus.robinhood.com/orders/";
 
-        public string QuotesUrl => $"{this.Authority}/marketdata/forex/quotes/";
+        public string QuotesUrl => $"{Authority}/marketdata/forex/quotes/";
 
-        public string UnifiedAccountUrl => $"https://phoenix.robinhood.com/accounts/unified";
+        public static string UnifiedAccountUrl => $"https://phoenix.robinhood.com/accounts/unified";
 
         public UserResponse User { get; private set; }
 
-        public string UserUrl => $"{this.Authority}/user/";
+        public string UserUrl => $"{Authority}/user/";
 
         private static string LogDirectory => Path.Combine(AppData, "Logs", $"{Process.GetCurrentProcess().ProcessName}");
 
-        private string CachedAuthPath => Path.Combine(AppData, "Token.json");
+        private static string CachedAuthPath => Path.Combine(AppData, "Token.json");
 
         public RobinhoodClient(IAuthenticationSettings settings)
         {
@@ -73,9 +73,9 @@ namespace Penguin.Robinhood
                 throw new ArgumentNullException(nameof(settings));
             }
 
-            this.Settings = settings;
+            Settings = settings;
 
-            this.LogWriter = new LogWriter(new LogWriterSettings()
+            LogWriter = new LogWriter(new LogWriterSettings()
             {
                 ObjectSerializationOverride = JsonConvert.SerializeObject,
                 OutputTarget = LogOutput.Debug | LogOutput.File,
@@ -84,9 +84,9 @@ namespace Penguin.Robinhood
 
             AuthenticationResponse existingAuth = null;
 
-            if (File.Exists(this.CachedAuthPath))
+            if (File.Exists(CachedAuthPath))
             {
-                existingAuth = JsonConvert.DeserializeObject<AuthenticationResponse>(File.ReadAllText(this.CachedAuthPath));
+                existingAuth = JsonConvert.DeserializeObject<AuthenticationResponse>(File.ReadAllText(CachedAuthPath));
 
                 if (existingAuth.IsExpired)
                 {
@@ -96,16 +96,16 @@ namespace Penguin.Robinhood
 
             if (existingAuth is null)
             {
-                this.RefreshSession();
+                RefreshSession();
             }
             else
             {
-                this.Authentication = existingAuth;
+                Authentication = existingAuth;
             }
 
-            this.User = this.DownloadJson<UserResponse>(this.UserUrl);
+            User = DownloadJson<UserResponse>(UserUrl);
 
-            this.Accounts = this.DownloadJson<AccountsResponse>(this.AccountsUrl).Results;
+            Accounts = DownloadJson<AccountsResponse>(AccountsUrl).Results;
         }
 
         public static void CacheDataPoint(Guid id, DataPoint dp)
@@ -127,7 +127,7 @@ namespace Penguin.Robinhood
 
             string datapointcache = $"{id.DataPointDirectory()}.json";
 
-            using StreamWriter sw = new StreamWriter(datapointcache, true);
+            using StreamWriter sw = new(datapointcache, true);
 
             sw.WriteLine(dp.ToString());
         }
@@ -180,11 +180,11 @@ namespace Penguin.Robinhood
 
             if (purchasePrice is null)
             {
-                Quote quote = this.DownloadJson<Quote>(this.QuoteUrl(toPurchase));
+                Quote quote = DownloadJson<Quote>(QuoteUrl(toPurchase));
 
                 if (usdAmount == decimal.MaxValue)
                 {
-                    decimal avail = this.GetAccountInformation().CryptoBuyingPower.Amount * 0.985m;
+                    decimal avail = GetAccountInformation().CryptoBuyingPower.Amount * 0.985m;
 
                     quantity = (int)(avail / quote.AskPrice);
                 }
@@ -196,7 +196,7 @@ namespace Penguin.Robinhood
                 quantity = (int)(usdAmount / price);
             }
 
-            Order order = new Order
+            Order order = new()
             {
                 AccountId = account.Id,
                 CurrencyPairId = toPurchase.Id,
@@ -205,7 +205,7 @@ namespace Penguin.Robinhood
                 Type = price is null ? "market" : "limit"
             };
 
-            return this.UploadJson<OrderResponse>(this.OrderUrl, order);
+            return UploadJson<OrderResponse>(OrderUrl, order);
         }
 
         public override T DownloadJson<T>(string url, JsonSerializerSettings downloadSerializerSettings = null)
@@ -216,30 +216,30 @@ namespace Penguin.Robinhood
             {
                 try
                 {
-                    toReturn = this.LogWebException(() => base.DownloadJson<T>(url, downloadSerializerSettings));
+                    toReturn = LogWebException(() => base.DownloadJson<T>(url, downloadSerializerSettings));
                     break;
                 }
                 catch (SessionExpiredException)
                 {
-                    this.RefreshSession();
+                    RefreshSession();
                 }
             } while (true);
 
-            this.TryLog(toReturn);
+            TryLog(toReturn);
 
             return toReturn;
         }
 
         public FindResponse Find(string query)
         {
-            return this.DownloadJson<FindResponse>(this.SearchUrl(query));
+            return DownloadJson<FindResponse>(SearchUrl(query));
         }
 
         public CurrencyPair FindCurrency(string query, CurrencyMatch match = CurrencyMatch.CodeOrName)
         {
-            List<CurrencyPair> pairs = this.Find(query).CurrencyPairs.ToList();
+            List<CurrencyPair> pairs = Find(query).CurrencyPairs.ToList();
 
-            List<CurrencyPair> results = new List<CurrencyPair>();
+            List<CurrencyPair> results = new();
 
             if (match.HasFlag(CurrencyMatch.Code))
             {
@@ -261,9 +261,9 @@ namespace Penguin.Robinhood
                 throw new ArgumentNullException(nameof(query));
             }
 
-            if (!Tickers.TryGetValue(query.ToUpper(), out string Id))
+            if (!Tickers.TryGetValue(query.ToUpper(System.Globalization.CultureInfo.CurrentCulture), out string Id))
             {
-                CurrencyPair pair = this.FindCurrency(query, currencyMatch);
+                CurrencyPair pair = FindCurrency(query, currencyMatch);
 
                 Id = pair.Id;
 
@@ -273,20 +273,20 @@ namespace Penguin.Robinhood
             return new SymbolResponse()
             {
                 Id = Guid.Parse(Id),
-                Symbol = query.ToUpper()
+                Symbol = query.ToUpper(System.Globalization.CultureInfo.CurrentCulture)
             };
         }
 
         public AccountInformation GetAccountInformation()
         {
-            AccountInformation toReturn = this.DownloadJson<AccountInformation>(this.UnifiedAccountUrl);
+            AccountInformation toReturn = DownloadJson<AccountInformation>(UnifiedAccountUrl);
 
             return toReturn;
         }
 
         public DataPoint GetDataPoint(IHasId id, DateTime datePointTime, HistoricalInterval interval, bool cacheOnly = false)
         {
-            DateTime parsedRequest = new DateTime(datePointTime.Year, datePointTime.Month, datePointTime.Day, datePointTime.Hour, datePointTime.Minute, 0);
+            DateTime parsedRequest = new(datePointTime.Year, datePointTime.Month, datePointTime.Day, datePointTime.Hour, datePointTime.Minute, 0);
 
             FileInfo cachedFile = id.DataPointFile(parsedRequest, interval);
 
@@ -307,14 +307,14 @@ namespace Penguin.Robinhood
 
             if ((DateTime.Now - parsedRequest).TotalDays < 1)
             {
-                this.RequestHistorical(id, HistoricalSpan._Day, HistoricalInterval._5Minute);
-                return this.GetDataPoint(id, parsedRequest, interval, true);
+                _ = RequestHistorical(id, HistoricalSpan._Day, HistoricalInterval._5Minute);
+                return GetDataPoint(id, parsedRequest, interval, true);
             }
 
             if ((DateTime.Now - parsedRequest).TotalDays < 7)
             {
-                this.RequestHistorical(id, HistoricalSpan._Week, HistoricalInterval._5Minute);
-                return this.GetDataPoint(id, parsedRequest, interval, true);
+                _ = RequestHistorical(id, HistoricalSpan._Week, HistoricalInterval._5Minute);
+                return GetDataPoint(id, parsedRequest, interval, true);
             }
 
             int WithinMonths = 0;
@@ -329,26 +329,26 @@ namespace Penguin.Robinhood
 
             if (WithinMonths < 1)
             {
-                this.RequestHistorical(id, HistoricalSpan._Month, HistoricalInterval._Hour);
-                return this.GetDataPoint(id, parsedRequest, interval, true);
+                _ = RequestHistorical(id, HistoricalSpan._Month, HistoricalInterval._Hour);
+                return GetDataPoint(id, parsedRequest, interval, true);
             }
 
             if (WithinMonths < 3)
             {
-                this.RequestHistorical(id, HistoricalSpan._3Month, HistoricalInterval._Hour);
-                return this.GetDataPoint(id, parsedRequest, interval, true);
+                _ = RequestHistorical(id, HistoricalSpan._3Month, HistoricalInterval._Hour);
+                return GetDataPoint(id, parsedRequest, interval, true);
             }
 
             if (WithinMonths < 12)
             {
-                this.RequestHistorical(id, HistoricalSpan._Year, HistoricalInterval._Hour);
-                return this.GetDataPoint(id, parsedRequest, interval, true);
+                _ = RequestHistorical(id, HistoricalSpan._Year, HistoricalInterval._Hour);
+                return GetDataPoint(id, parsedRequest, interval, true);
             }
 
             if (WithinMonths < 60)
             {
-                this.RequestHistorical(id, HistoricalSpan._5Year, HistoricalInterval._Hour);
-                return this.GetDataPoint(id, parsedRequest, interval, true);
+                _ = RequestHistorical(id, HistoricalSpan._5Year, HistoricalInterval._Hour);
+                return GetDataPoint(id, parsedRequest, interval, true);
             }
 
             return null;
@@ -356,21 +356,21 @@ namespace Penguin.Robinhood
 
         public Holding GetHolding(IHasId hasId)
         {
-            List<Holding> holdings = this.GetHoldings().ToList();
+            List<Holding> holdings = GetHoldings().ToList();
 
             return holdings.FirstOrDefault(r => string.Equals(r.Currency.Code, FindSymbol(hasId), StringComparison.OrdinalIgnoreCase));
         }
 
         public IEnumerable<Holding> GetHoldings()
         {
-            return this.DownloadJson<HoldingsResponse>(this.HoldingUrl).Results;
+            return DownloadJson<HoldingsResponse>(HoldingUrl).Results;
         }
 
         public Quote GetQuote(IHasId id)
         {
-            Quote q = this.DownloadJson<Quote>(this.QuoteUrl(id));
+            Quote q = DownloadJson<Quote>(QuoteUrl(id));
 
-            DataPoint dp = new DataPoint()
+            DataPoint dp = new()
             {
                 BeginsAt = DateTime.Now,
                 ClosePrice = q.BidPrice,
@@ -390,9 +390,9 @@ namespace Penguin.Robinhood
 
         public IEnumerable<Quote> GetQuotes(QuoteRequest request)
         {
-            foreach (Quote quote in this.UploadJson<QuotesResponse>(this.QuotesUrl, request).Results)
+            foreach (Quote quote in UploadJson<QuotesResponse>(QuotesUrl, request).Results)
             {
-                Tickers.TryAdd(quote.Symbol, $"{quote.Id}");
+                _ = Tickers.TryAdd(quote.Symbol, $"{quote.Id}");
 
                 yield return quote;
             }
@@ -400,7 +400,7 @@ namespace Penguin.Robinhood
 
         public IEnumerable<Quote> GetQuotes(IEnumerable<IHasId> Ids)
         {
-            return this.GetQuotes(new QuoteRequest()
+            return GetQuotes(new QuoteRequest()
             {
                 Ids = Ids.ToList()
             });
@@ -408,27 +408,27 @@ namespace Penguin.Robinhood
 
         public string HistoricalUrl(IHasId Id)
         {
-            return Id is null ? throw new ArgumentNullException(nameof(Id)) : $"{this.Authority}/marketdata/forex/historicals/{Id.Id}/";
+            return Id is null ? throw new ArgumentNullException(nameof(Id)) : $"{Authority}/marketdata/forex/historicals/{Id.Id}/";
         }
 
         public string QuoteUrl(IHasId id)
         {
-            return id is null ? throw new ArgumentNullException(nameof(id)) : $"{this.Authority}/marketdata/forex/quotes/{id.Id}/";
+            return id is null ? throw new ArgumentNullException(nameof(id)) : $"{Authority}/marketdata/forex/quotes/{id.Id}/";
         }
 
         public void RefreshSession()
         {
-            this.Authentication = null;
+            Authentication = null;
 
-            this.Authentication = this.UploadJson<AuthenticationResponse>(this.AuthUrl, new AuthenticationRequest()
+            Authentication = UploadJson<AuthenticationResponse>(AuthUrl, new AuthenticationRequest()
             {
-                ClientId = this.Settings.ClientId,
-                DeviceToken = this.Settings.DeviceToken,
-                Password = this.Settings.Password,
-                Username = this.Settings.Username
+                ClientId = Settings.ClientId,
+                DeviceToken = Settings.DeviceToken,
+                Password = Settings.Password,
+                Username = Settings.Username
             });
 
-            File.WriteAllText(this.CachedAuthPath, JsonConvert.SerializeObject(this.Authentication, Formatting.Indented));
+            File.WriteAllText(CachedAuthPath, JsonConvert.SerializeObject(Authentication, Formatting.Indented));
         }
 
         public HistoricalResponse RequestHistorical(IHasId id, HistoricalSpan span, HistoricalInterval interval, HistoricalBounds bounds = HistoricalBounds._24_7)
@@ -448,7 +448,7 @@ namespace Penguin.Robinhood
                 throw new InvalidRequestException("15 second timespan is only available for hour and shorter");
             }
 
-            HistoricalRequest request = new HistoricalRequest()
+            HistoricalRequest request = new()
             {
                 Id = $"{id.Id}",
                 Bounds = bounds,
@@ -456,7 +456,7 @@ namespace Penguin.Robinhood
                 Span = span
             };
 
-            HistoricalResponse response = this.DownloadJson<HistoricalResponse>($"{this.HistoricalUrl(id)}?{request}");
+            HistoricalResponse response = DownloadJson<HistoricalResponse>($"{HistoricalUrl(id)}?{request}");
 
             foreach (DataPoint dp in response.DataPoints)
             {
@@ -471,7 +471,7 @@ namespace Penguin.Robinhood
             return response;
         }
 
-        public string SearchUrl(string query)
+        public static string SearchUrl(string query)
         {
             return $"https://bonfire.robinhood.com/deprecated_search/?query={query}&user_origin=US";
         }
@@ -480,8 +480,8 @@ namespace Penguin.Robinhood
         /// Buys the specified coin with the specified account
         /// </summary>
         /// <param name="account"></param>
-        /// <param name="toPurchase"></param>
-        /// <param name="usdAmount">Quantity to purchase. If max value, then uses all available funds</param>
+        /// <param name="toSell"></param>
+        /// <param name="unitsToSell"></param>
         /// <param name="price">if null, uses market. Otherwise, limit</param>
         /// <returns></returns>
         public OrderResponse Sell(Account account, IHasId toSell, decimal unitsToSell, decimal? price = null)
@@ -500,17 +500,17 @@ namespace Penguin.Robinhood
 
             if (unitsToSell == decimal.MaxValue)
             {
-                unitsToSell = this.GetHolding(toSell).QuantityAvailable;
+                unitsToSell = GetHolding(toSell).QuantityAvailable;
             }
 
             if (sellPrice is null)
             {
-                Quote quote = this.DownloadJson<Quote>(this.QuoteUrl(toSell));
+                Quote quote = DownloadJson<Quote>(QuoteUrl(toSell));
 
                 sellPrice = quote.AskPrice;
             }
 
-            Order order = new Order
+            Order order = new()
             {
                 AccountId = account.Id,
                 CurrencyPairId = toSell.Id,
@@ -520,62 +520,62 @@ namespace Penguin.Robinhood
                 Type = price is null ? "market" : "limit"
             };
 
-            return this.UploadJson<OrderResponse>(this.OrderUrl, order);
+            return UploadJson<OrderResponse>(OrderUrl, order);
         }
 
         public override string UploadJson(string url, string toUpload)
         {
-            this.TryLog(toUpload);
+            TryLog(toUpload);
 
-            string toReturn = this.LogWebException(() => base.UploadJson(url, toUpload));
+            string toReturn = LogWebException(() => base.UploadJson(url, toUpload));
 
-            this.TryLog(toReturn);
+            TryLog(toReturn);
 
             return toReturn;
         }
 
         public override T UploadJson<T>(string url, object toUpload, JsonSerializerSettings downloadSerializerSettings = null, JsonSerializerSettings uploadSerializerSettings = null)
         {
-            this.TryLog(toUpload);
+            TryLog(toUpload);
             T toReturn = default;
 
             do
             {
                 try
                 {
-                    toReturn = this.LogWebException(() => base.UploadJson<T>(url, toUpload, downloadSerializerSettings, uploadSerializerSettings));
+                    toReturn = LogWebException(() => base.UploadJson<T>(url, toUpload, downloadSerializerSettings, uploadSerializerSettings));
                     break;
                 }
-                catch (SessionExpiredException sex)
+                catch (SessionExpiredException)
                 {
-                    this.RefreshSession();
+                    RefreshSession();
                 }
             } while (true);
-            this.TryLog(toReturn);
+            TryLog(toReturn);
 
             return toReturn;
         }
 
         protected override void Dispose(bool disposing)
         {
-            this.LogWriter?.Dispose();
+            LogWriter?.Dispose();
 
             base.Dispose(disposing);
         }
 
         protected override void PreRequest(Uri url)
         {
-            this.Headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36";
+            Headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36";
 
-            if (this.Authentication != null)
+            if (Authentication != null)
             {
-                this.Headers[AUTHORIZATION_HEADER] = $"Bearer {this.Authentication.AccessToken}";
+                Headers[AUTHORIZATION_HEADER] = $"Bearer {Authentication.AccessToken}";
             }
             else
             {
-                if (this.Headers.AllKeys.Contains(AUTHORIZATION_HEADER))
+                if (Headers.AllKeys.Contains(AUTHORIZATION_HEADER))
                 {
-                    this.Headers.Remove(AUTHORIZATION_HEADER);
+                    Headers.Remove(AUTHORIZATION_HEADER);
                 }
             }
         }
@@ -588,7 +588,7 @@ namespace Penguin.Robinhood
             }
             catch (WebException wex) when (wex.Response != null)
             {
-                using (StreamReader r = new StreamReader(wex.Response.GetResponseStream()))
+                using (StreamReader r = new(wex.Response.GetResponseStream()))
                 {
                     string responseContent = r.ReadToEnd();
 
@@ -597,7 +597,7 @@ namespace Penguin.Robinhood
                         throw new SessionExpiredException();
                     }
 
-                    this.LogWriter.WriteLine(responseContent);
+                    LogWriter.WriteLine(responseContent);
                 }
 
                 throw;
@@ -608,13 +608,13 @@ namespace Penguin.Robinhood
         {
             try
             {
-                this.LogWriter.WriteLine(o);
+                LogWriter.WriteLine(o);
             }
             catch (Exception ex)
             {
-                this.LogWriter.WriteLine("An exception occured while logging.");
-                this.LogWriter.WriteLine(ex.Message);
-                this.LogWriter.WriteLine(ex.StackTrace);
+                LogWriter.WriteLine("An exception occured while logging.");
+                LogWriter.WriteLine(ex.Message);
+                LogWriter.WriteLine(ex.StackTrace);
             }
         }
     }

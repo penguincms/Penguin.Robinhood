@@ -1,20 +1,21 @@
 ﻿using Penguin.Web.Http;
-using Penguin.Web.Http.Attributes;
+using Loxifi.Attributes;
+using Loxifi;
 
 namespace Penguin.Robinhood.Models
 {
     public class HistoricalRequest : HttpQuery
     {
-        [IgnoreQueryProperty]
+        [HttpQueryPropertyIgnore]
         public HistoricalBounds Bounds { get; set; } = HistoricalBounds._24_7;
 
-        [IgnoreQueryProperty]
+        [HttpQueryPropertyIgnore]
         public string Id { get; set; }
 
-        [IgnoreQueryProperty]
+        [HttpQueryPropertyIgnore]
         public HistoricalInterval Interval { get; set; }
 
-        [IgnoreQueryProperty]
+        [HttpQueryPropertyIgnore]
         public HistoricalSpan Span { get; set; }
 
         [HttpQueryProperty("bounds")]

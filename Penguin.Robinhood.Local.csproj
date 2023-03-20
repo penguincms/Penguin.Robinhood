@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <PackageProjectUrl>https://github.com/PenguinCms/Penguin.Robinhood</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/PenguinCMS/Penguin.Robinhood</PackageProjectUrl>
     <DocumentationFile>Penguin.Robinhood.xml</DocumentationFile>
     <Version>5.0.5</Version>
     <AssemblyName>Penguin.Robinhood</AssemblyName>
@@ -12,9 +12,6 @@
   <ItemGroup>
     <PackageReference Include="Loxifi.DictionaryFile" Version="0.1.0" />
     <PackageReference Include="Loxifi.LogWriter" Version="0.1.0" />
-    <PackageReference Include="Loxifi.UrlBuilder" Version="0.1.0" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Penguin.Collections\Penguin.Collections.Local.csproj" />
     <ProjectReference Include="..\Penguin.Debugging\Penguin.Debugging.Local.csproj" />
     <ProjectReference Include="..\Penguin.Extensions.Exceptions\Penguin.Extensions.Exceptions.Local.csproj" />
